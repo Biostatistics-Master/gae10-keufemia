@@ -1,6 +1,6 @@
 ---
 title: "GAE10: PCA & NMDS"
-author: "Your Name Here"
+author: "Katie Eufemia"
 format: 
   html:
     theme: custom.scss
@@ -21,10 +21,16 @@ knitr::opts_chunk$set(
   echo = FALSE
   )
 
+library(vegan)
+library(ggrepel)
+library(FactoMineR)
+library(factoextra)
+
 library(latex2exp)
 library(patchwork)
 library(kableExtra)
 library(tidyverse)
+
 
 options(scipen = 10)
 
@@ -52,6 +58,8 @@ knitr::include_graphics("Kingfishers.png")
 
 #### Statistical Methods:
 
+A Principle Components Analysis (PCA) was used to examine the patterns of coloration. All analyses were conducted in R program [@base] using the tidyverse, kableExtra, FactoMineR, and factoextra packages [@tidyverse][@kableExtra][@FactoMineR][@factoextra].
+
 ```{r}
 #| label: Scenario1DataImport
 
@@ -61,6 +69,57 @@ knitr::include_graphics("Kingfishers.png")
 # classifications (qualitative supplemental variables, columns 14-17) in
 # colors.csv. Please explore any grouping and/or patterning among the species
 # and their ecological/behavioral traits.
+
+BirdData <- read_csv("colors.csv", show_col_types = FALSE)
+
+```
+
+### Results
+
+After examining the PCA, no significant difference was found among the tested variables. There was a strong correlation between wing covert and color. Size, however, did not correlate with color. Overall, hunting strategy showed greatest difference along PCA.
+
+```{r}
+BirdPCA <- PCA(
+  BirdData,
+  quanti.sup = 13,
+  quali.sup = c(1,14:17),
+  graph = FALSE
+)
+```
+
+```{r}
+#| label: fig-ColorsVar
+#| fig-cap: "Principle Components Analysis of variables. X-axis represents blue coloration while the Y-axis represents a red-green coloration."
+
+fviz_pca_var(
+  BirdPCA,
+  repel = TRUE,
+  label = "var"
+)
+```
+
+```{r}
+#| label: fig-ColorsBiplot
+#| fig-cap: "Principle Component Analysis of individual color based on hunting strategy."
+#| fig-asp: 0.8
+#| warning: false
+
+
+fviz_pca_ind(
+  BirdPCA,
+  repel = TRUE,
+  label = "var",
+  habillage = c(
+    "Hunting_strategy"
+  ),
+#  addEllipses = TRUE
+)
+```
+
+```{r}
+#| results: "hide"
+
+summary(BirdPCA)
 
 ```
 
@@ -78,6 +137,8 @@ In Summer 2011, the researchers visited 17 deer exclosures in upland forests of 
 
 #### Statistical Methods:
 
+A Non-metric MultiDimensional Scaling analysis (nMDS) was used to examine the patterns of deer exclusions. All analyses were conducted in R program [@base-2] using the vegan package [@vegan]. A Permutation Anova was also conducted using the adonis() function.
+
 ```{r}
 #| label: Scenario2DataImport
 
@@ -88,6 +149,136 @@ In Summer 2011, the researchers visited 17 deer exclosures in upland forests of 
 # Use NMDS to explore the differences in plant community inside and outside the
 # deer exclosures, then test for differences in the plant communities between
 # the deer exclosures and the adjacent forests.
+```
+
+```{r}
+Deer <- read_csv("Sabo_etal_data.csv", show_col_types = FALSE)
+
+
+#| label: DeerNMDS
+#| results = "hide"
+
+DeerNMDS <- metaMDS(
+  Deer[,-c(1:2)],
+  k=4
+)
+
+
+siteScores <- as.data.frame(Deer, "scores")
+siteScores$site <- Deer$Plot
+siteScores$type <- Deer$Treatment
+speciesScores <- as.data.frame(scores(DeerNMDS, "species"))
+
+speciesScores$species <- rownames(speciesScores)
+
+
+```
+
+### Results
+
+After examining the nMDS, the stress level was less than 0.10 - indicating a good representation. Dimension 1 and Dimension 2 overlapped completely; while Dimension 3 and Dimension 4 overlapped almost completely. The p-value was greater than 0.05 and we failed to reject the null hypothesis (p = 0.987) (@tbl-DeerPERMANOVA).
+
+```{r}
+#| label: fig-Deerbiplot
+#| fig-asp: 1
+#| fig-cap: "Sample nMDS plot scores as points. Scores were produced by non-metric multidimensional scaling of square-root transformed counts and were double-standardized."
+
+#Control <- siteScores[siteScores$type == "Control", ][chull
+                                                    # (siteScores[siteScores$type == "Control", c("NMDS1", "NMDS2")]), ]
+
+#hullpoints <- rbind(Control, Exclosure)
+
+#plot12 <- ggplot() +
+ # geom_point(
+ #   aes(
+  #    x = NMDS1,
+  #    y = NMDS2,
+  #    color = type
+   # ),
+    #data = siteScores,
+#    size = 3,
+ #   alpha = 0.5
+  #) +
+  #geom_polygon(
+   # data = hullPoints,
+    #aes(
+     # x = NMDS1
+      #y = NMDS2,
+  #    fill = type,
+#      group = type
+ #   ),
+  #  alpha = 0.30) +
+#  scale_x_continuous((limits = c(-1.7,1.7),
+ # expand = c(0,0)) +
+  #  scale_y_continuous(limits = c(-1.7,1.7),
+#  expand = c(0,0)) +
+ #   theme_minimal()
+  
+  
+#Control34 <- siteScores[siteScores$type == "Control", ][chull
+                                                    #    (siteScores[siteScores$type == "Control", c("NMDS3", "NMDS4")]),]
+
+
+#Exclosure34 <- siteScores[siteScores$type == "Exclosure", ][chull
+                                                     #       (siteScores[siteScores$type == "Exclosure", c("NMDS3", "NMDS4")]),]
+
+
+#hullPoints34 <- rbind(Control34, Exclosure34)
+
+#plot34 <- ggplot() +
+#  geom_point(
+#    aes(
+#      x = NMDS3,
+#      y = NMDS4,
+#      color = type
+#    ),
+#    data = siteScores,
+ #   size = 3,
+#    alpha = 0.5
+#  ) +
+#  geom_polygon(
+ #   data = hullPoints34,
+#    aes(
+#      x = NMDS3,
+#      y = NMDS4,
+#      fill = type,
+#      group = type
+#    ),
+#    alpha = 0.30) +
+#  scale_x_continuous(limits = c(-1.7,1.7),
+#                     expand = c(0,0)) + 
+#  scale_y_continuous(limits = c(-1.7,1.7),
+#                     expand = c(0,0)) +
+#  theme_minimal()
+#  )
+                                                  
+
+```
+
+```{r}
+#| label: tbl-DeerPERMANOVA
+#| tbl-cap: "PERMANOVA to test for a difference in plant assemblages between deer exclusoin areas and adjacent areas."
+
+DeerPERMANOVA <- adonis2(
+  Deer[,-c(1,2)] ~ Treatment,
+  data = Deer,
+  by = "margin",
+  permutations = 10001
+)
+
+kbl(
+  DeerPERMANOVA,
+  format = "markdown",
+  digits = c(0,3,3,3,3),
+  col.names = c(
+    "df",
+    "SS",
+    "$R^2$",
+    "F",
+    "p"
+  )
+)
+
 ```
 
 ### References:
